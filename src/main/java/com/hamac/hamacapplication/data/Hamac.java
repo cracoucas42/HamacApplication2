@@ -5,8 +5,8 @@ import java.util.List;
 
 public class Hamac implements Serializable
 {
-    private String name;
     private String id;//create to identify the Hamac during time, has to be unique
+    private String name;
     private String description;
     private double lat = 0;
     private double lng = 0;
@@ -16,6 +16,9 @@ public class Hamac implements Serializable
     private String photoUrl_3 = "";
     private String photoUrl_4 = "";
     private String photoUrl_5 = "";
+
+    public Hamac() {
+    }
 
     public Hamac(String id, String name, String description, double lat, double lng) {
         this.id = id;

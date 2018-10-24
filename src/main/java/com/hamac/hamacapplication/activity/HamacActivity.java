@@ -18,6 +18,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.gms.tasks.OnFailureListener;
@@ -27,6 +28,7 @@ import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.OnProgressListener;
 import com.google.firebase.storage.StorageReference;
 import com.google.firebase.storage.UploadTask;
+import com.hamac.hamacapplication.data.Hamac;
 import com.hamac.hamacapplication.data.Navigation;
 import com.hamac.hamacapplication.R;
 
@@ -45,6 +47,9 @@ public class HamacActivity extends AppCompatActivity {
     private ImageView photoView1;
     private Uri filePath;
     private String currentDir;
+    private Hamac selectedHamac = new Hamac();
+    private TextView hamacTitleView;
+    private TextView hamacDescriptionView;
     //Firebase
     FirebaseStorage storage;
     StorageReference storageReference;
@@ -58,6 +63,11 @@ public class HamacActivity extends AppCompatActivity {
         Intent myIntent = new Intent();
         myIntent = HamacActivity.this.getIntent();
         firstLaunch_flag = myIntent.getBooleanExtra("FIRST_LAUNCH", true);
+        selectedHamac = (Hamac) myIntent.getSerializableExtra("HAMAC_SELECTED");
+
+        //Manage FireBase storage for photos view
+        storage = FirebaseStorage.getInstance();
+        storageReference = storage.getReference();
 
         //Configure addPhotoBtn add_image_hamac_details
         addPhotoBtn = findViewById(R.id.iv_add_image_hamac_details);
@@ -93,6 +103,15 @@ public class HamacActivity extends AppCompatActivity {
                 startActivity(myIntent);
             }
         });
+
+        //########### Populate Data to Hamac Layout
+        //Title textView
+        hamacTitleView = findViewById(R.id.tv_hamac_title);
+        hamacTitleView.setText(selectedHamac.getName());
+
+        //Description
+        hamacDescriptionView = findViewById(R.id.tv_hamac_description);
+        hamacDescriptionView.setText(selectedHamac.getDescription());
 
         //Take data view from activity to ui view into layout
         photoView1 = findViewById(R.id.iv_hamac_photo1);

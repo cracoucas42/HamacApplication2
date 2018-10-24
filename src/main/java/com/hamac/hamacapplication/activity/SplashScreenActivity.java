@@ -93,8 +93,8 @@ public class SplashScreenActivity extends Activity {
                     for(DataSnapshot ds : dataSnapshot.getChildren())
                     {
                         Hamac currentHamac = new Hamac(
-                                ds.child("name").getValue(String.class),
                                 ds.child("id").getValue(String.class),
+                                ds.child("name").getValue(String.class),
                                 ds.child("description").getValue(String.class),
                                 ds.child("lat").getValue(Double.class),
                                 ds.child("lng").getValue(Double.class),

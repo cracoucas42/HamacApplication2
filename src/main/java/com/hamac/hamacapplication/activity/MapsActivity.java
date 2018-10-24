@@ -456,6 +456,7 @@ public class MapsActivity extends AppCompatActivity implements
 
         addAndDrawHamacMarker(currentHamac, currentLocation);
         String hamacId = mDatabase.push().getKey();
+        currentHamac.setId(hamacId);
         // pushing current to 'HamacListOnLine' node using the userId
         mDatabase.child(hamacId).setValue(currentHamac);
     }
@@ -683,9 +684,7 @@ public class MapsActivity extends AppCompatActivity implements
                         width : the popup's width
                         height : the popup's height
                 */
-        //Set Popup-textView with title of current clicked HamacMarker
-        TextView popupMarkerTitle = customView.findViewById(R.id.tv_popup_marker_title);
-        popupMarkerTitle.setText(description + " ############ " + description);
+
         // Initialize a new instance of popup window
         if (mPopupWindow != null)
             mPopupWindow.dismiss();
@@ -715,12 +714,18 @@ public class MapsActivity extends AppCompatActivity implements
         });
 
         //Get hamac selected
-//        for (int i=0; i < hamacList.size(); i++)
-//        {
-//
-//        }
-//        Hamac selectedHamac = hamacList.get
+        Hamac selectedHamac = new Hamac();
+        for (int i=0; i < hamacList.size(); i++)
+        {
+            if (hamacId.equalsIgnoreCase(hamacList.get(i).getId()))
+                selectedHamac = hamacList.get(i);
+        }
 
+        //Set current Popup-textView with title of current clicked HamacMarker
+        TextView popupMarkerTitle = customView.findViewById(R.id.tv_popup_marker_title);
+        popupMarkerTitle.setText(selectedHamac.getDescription());
+
+        final Hamac f_selectedHamac = selectedHamac;
         // Get a reference for the custom view close button
         ImageButton moreDetailsButton = customView.findViewById(R.id.ib_popup_more_details);
         // Set a click listener for the popup window close button
@@ -732,7 +737,7 @@ public class MapsActivity extends AppCompatActivity implements
                 // Dismiss the popup window
                 mPopupWindow.dismiss();
                 Intent myIntent = new Intent(MapsActivity.this, HamacActivity.class);
-//                myIntent.putExtra("HAMAC_SELECTED", hamacId);
+                myIntent.putExtra("HAMAC_SELECTED", f_selectedHamac);
                 startActivity(myIntent);
             }
         });
