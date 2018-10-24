@@ -75,7 +75,7 @@ public class MapsActivity extends AppCompatActivity implements
 
     private GoogleMap mMap;
     private int hamacCounter = 0;
-    private List<Hamac> hamacList = new ArrayList<Hamac>();
+    private ArrayList<Hamac> hamacList = new ArrayList<Hamac>();
     //    private LocationListener listener;
     private ProgressDialog dialog;
     private View mView;
@@ -95,22 +95,6 @@ public class MapsActivity extends AppCompatActivity implements
         setContentView(R.layout.activity_maps);
         firstLaunch_flag = true;
 
-//        if (hamacList.size()<9)
-//        {
-//            dialog = new ProgressDialog(this);
-//            dialog.setMessage("Please wait while getting HamacList!");
-//            dialog.show();
-//            while (true)
-//            {
-//                if (hamacList.size() > 0)
-//                {
-//                    dialog.dismiss();
-//                    return;
-//                }
-//            }
-//
-//        }
-
         //Get Data from DB and populate HamacList
         hamacDatabaseHelper = new DatabaseHelper(this);
 //        populateHamacListFromLocalDb();
@@ -118,113 +102,13 @@ public class MapsActivity extends AppCompatActivity implements
         //Manage DataBase
         mDatabase = FirebaseDatabase.getInstance().getReference("HAMAC_LIST_ONLINE");
 
-        ValueEventListener messageListener = new ValueEventListener()
-        {
-            @Override
-            public void onDataChange(DataSnapshot dataSnapshot)
-            {
-                if (dataSnapshot.exists())
-                {
-                    Toast.makeText(getBaseContext(), "Read FireBase Before", Toast.LENGTH_SHORT).show();
-                    for(DataSnapshot ds : dataSnapshot.getChildren())
-                    {
-                        Hamac currentHamac = new Hamac(
-                                ds.child("name").getValue(String.class),
-                                ds.child("id").getValue(String.class),
-                                ds.child("description").getValue(String.class),
-                                ds.child("lat").getValue(Double.class),
-                                ds.child("lng").getValue(Double.class),
-                                ds.child("user").getValue(String.class),
-                                ds.child("photoUrl_1").getValue(String.class),
-                                ds.child("photoUrl_2").getValue(String.class),
-                                ds.child("photoUrl_3").getValue(String.class),
-                                ds.child("photoUrl_4").getValue(String.class),
-                                ds.child("photoUrl_5").getValue(String.class));
-
-                        Log.d("Reading Firebase", "Current Hamac name: " + ds.child("name").getValue(String.class)
-                                + " LNG :" + ds.child("lng").getValue(Double.class)
-                                + " LAT :" + ds.child("lat").getValue(Double.class));
-
-//
-//                        String arrival = ds.child("Arrival").getValue(String.class);
-//                        String departure = ds.child("Departure").getValue(String.class);
-//                        String time = ds.child("Time").getValue(String.class);
-//                        Log.d("TAG", arrival + " / " + departure  + " / " + time);
-                        // Get Post object and use the values to update the UI
-//                        Hamac currentHamac = ds.child(ds.getKey()).getValue(Hamac.class);
-
-//                        Log.d("Reading Firebase", "Current Hamac : " + ds.getKey());
-
-                        hamacList.add(currentHamac);
-                    }
-                }
-                Toast.makeText(getBaseContext(), "Read FireBase After HamacList SIZE : " + hamacList.size(), Toast.LENGTH_LONG).show();
-            }
-
-            @Override
-            public void onCancelled(DatabaseError databaseError) {
-                // Failed to read value
-                Log.e("Error Reading Firebase", "onCancelled: Failed to read message");
-            }
-        };
-        mDatabase.addValueEventListener(messageListener);
-        // copy for removing at onStop()
-        mMessageListener = messageListener;
-
-
-//        mStorageRef = FirebaseStorage.getInstance().getReference();
-        //Write FireBase
-//        mDatabase = FirebaseDatabase.getInstance().getReference();
-//        mDatabase = FirebaseDatabase.getInstance().getReference("HAMAC_LIST_ONLINE");
-
-//        for (int i=0; i < hamacList.size(); i++)
-//        {
-////            Toast.makeText(getBaseContext(), "Writiiiiiiing to Firebase", Toast.LENGTH_SHORT).show();
-//            Hamac currentHamac = hamacList.get(i);
-//            // Creating new Hamac node, which returns the unique key value
-//            // new Hamac node would be /users/$userid/
-//            String hamacId = mDatabase.push().getKey();
-//            // pushing current to 'HamacListOnLine' node using the userId
-//            mDatabase.child(hamacId).setValue(currentHamac);
-//        }
-
-//        mDatabase.addListenerForSingleValueEvent(new ValueEventListener()
-//        {
-//            @Override
-//            public void onDataChange(DataSnapshot dataSnapshot)
-//            {
-//
-//                List<String> list = new ArrayList<>();
-//                for(DataSnapshot ds : dataSnapshot.getChildren()) {
-//                    String arrival = ds.child("Arrival").getValue(String.class);
-//                    String departure = ds.child("Departure").getValue(String.class);
-//                    String time = ds.child("Time").getValue(String.class);
-//                    Log.d("TAG", arrival + " / " + departure  + " / " + time);
-//                    list.add(time);
-//                }
-//
-//                // Get Post object and use the values to update the UI
-//                Hamac currentHamac = dataSnapshot.getValue(Hamac.class);
-//                hamacList.add(currentHamac);
-//                // ...
-//            }
-//
-//            @Override
-//            public void onCancelled(DatabaseError databaseError)
-//            {
-//                // Getting Post failed, log a message
-//                Log.w("Error Reading FireBase", "loadPost:onCancelled", databaseError.toException());
-//                // ...
-//            }
-//        });
-
         //Get ShareData
         Intent myIntent = MapsActivity.this.getIntent();
 
         //Check first launch from shareData
         //TODO
         firstLaunch_flag = myIntent.getBooleanExtra("FIRST_LAUNCH", true);
-//        currentLocation = myIntent.getParcelableExtra("LOCATION");
+        hamacList = (ArrayList<Hamac>) myIntent.getSerializableExtra("HAMAC_LIST_FROM_ONLINE_DB");
 
         //Get ShareData HamacList
 //        if (!firstLaunch_flag)
@@ -252,23 +136,6 @@ public class MapsActivity extends AppCompatActivity implements
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
         mView = mapFragment.getView();
-    }
-
-    @Override
-    protected void onStart()
-    {
-        super.onStart();
-    }
-
-    @Override
-    protected void onStop()
-    {
-        super.onStop();
-
-        if (mMessageListener != null)
-        {
-            mDatabase.removeEventListener(mMessageListener);
-        }
     }
 
     private void populateHamacListFromLocalDb()
@@ -320,7 +187,7 @@ public class MapsActivity extends AppCompatActivity implements
 
     @Override
     public void onSaveInstanceState(Bundle savedInstanceState) {
-        savedInstanceState.putSerializable("CLICKED_POSITION_LIST", (Serializable) hamacList);
+        savedInstanceState.putSerializable("CLICKED_POSITION_LIST", hamacList);
         savedInstanceState.putSerializable("FIRST_LAUNCH", firstLaunch_flag);
         //declare values before saving the state
         super.onSaveInstanceState(savedInstanceState);
@@ -381,34 +248,45 @@ public class MapsActivity extends AppCompatActivity implements
         //Show start position with current GPS position
         //Check the management of the question for permission, mettre l'app en pause le temps de la reponse
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
-                == PackageManager.PERMISSION_GRANTED |
+                != PackageManager.PERMISSION_GRANTED |
                 ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION)
-                        == PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 1);
+                        != PackageManager.PERMISSION_GRANTED)
+        {
+            ActivityCompat.requestPermissions(this,
+                    new String[]
+                        {
+                            Manifest.permission.ACCESS_FINE_LOCATION,
+                            Manifest.permission.ACCESS_COARSE_LOCATION
+                        },
+                    1);
 
-            if (!mMap.isMyLocationEnabled()) {
-                mMap.setMyLocationEnabled(true);
-                mMap.setOnMyLocationButtonClickListener(this);
-                mMap.setOnMyLocationClickListener(this);
-            }
-
-            //Launch of the Location Service
-            lm = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-            lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 1, listener);
-            lm.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 1000, 1, listener);
-
-            if (firstLaunch_flag)
-            {
-                dialog = new ProgressDialog(this);
-                dialog.setMessage("Please wait!");
-                dialog.show();
-            }
-
-            Toast.makeText(getApplicationContext(), "SET MYLOCATION ENABLE", Toast.LENGTH_SHORT).show();
-        } else {
-            //REQUEST PERMISSION
-            Toast.makeText(getApplicationContext(), "REQUEST PERMISSION", Toast.LENGTH_LONG).show();
+            Toast.makeText(getApplicationContext(), "Request PERMISSION", Toast.LENGTH_SHORT).show();
         }
+        else
+        {
+            //REQUEST PERMISSION
+            Toast.makeText(getApplicationContext(), "PERMISSION OK", Toast.LENGTH_LONG).show();
+        }
+
+        if (!mMap.isMyLocationEnabled())
+        {
+            mMap.setMyLocationEnabled(true);
+            mMap.setOnMyLocationButtonClickListener(this);
+            mMap.setOnMyLocationClickListener(this);
+        }
+
+        //Launch of the Location Service
+        lm = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 1, listener);
+        lm.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 1000, 1, listener);
+
+        if (firstLaunch_flag)
+        {
+            dialog = new ProgressDialog(this);
+            dialog.setMessage("Please wait!");
+            dialog.show();
+        }
+
 
         //Replace the Location Button
         if (mView != null &&
