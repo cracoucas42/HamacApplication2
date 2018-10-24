@@ -25,9 +25,9 @@ public class Hamac implements Serializable
         this.lng = lng;
     }
 
-    public Hamac(String name, String id, String description, double lat, double lng, String user, String photoUrl_1, String photoUrl_2, String photoUrl_3, String photoUrl_4, String photoUrl_5) {
-        this.name = name;
+    public Hamac(String id, String name, String description, double lat, double lng, String user, String photoUrl_1, String photoUrl_2, String photoUrl_3, String photoUrl_4, String photoUrl_5) {
         this.id = id;
+        this.name = name;
         this.description = description;
         this.lat = lat;
         this.lng = lng;

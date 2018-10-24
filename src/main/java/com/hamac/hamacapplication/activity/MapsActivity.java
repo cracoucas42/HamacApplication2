@@ -138,27 +138,27 @@ public class MapsActivity extends AppCompatActivity implements
         mView = mapFragment.getView();
     }
 
-    private void populateHamacListFromLocalDb()
-    {
-        Log.d("MapsActivity", "populateListView: Displaying data in the ListView.");
-        Toast.makeText(getBaseContext(), "Populate List Before", Toast.LENGTH_SHORT).show();
-        //get the data and append to a list
-        Cursor data = hamacDatabaseHelper.getData();
-        ArrayList<String> listData = new ArrayList<>();
-        while(data.moveToNext())
-        {
-            //get the value from the database in column 1
-            //then add it to the ArrayList
-            Hamac restoreHamac = new Hamac(data.getString(1),
-                    data.getString(2),
-                    data.getString(3),
-                    Double.valueOf(data.getString(4)),
-                    Double.valueOf(data.getString(5)));
-
-            hamacList.add(restoreHamac);
-        }
-        Toast.makeText(getBaseContext(), "Populate List After", Toast.LENGTH_SHORT).show();
-    }
+//    private void populateHamacListFromLocalDb()
+//    {
+//        Log.d("MapsActivity", "populateListView: Displaying data in the ListView.");
+//        Toast.makeText(getBaseContext(), "Populate List Before", Toast.LENGTH_SHORT).show();
+//        //get the data and append to a list
+//        Cursor data = hamacDatabaseHelper.getData();
+//        ArrayList<String> listData = new ArrayList<>();
+//        while(data.moveToNext())
+//        {
+//            //get the value from the database in column 1
+//            //then add it to the ArrayList
+//            Hamac restoreHamac = new Hamac(data.getString(1),
+//                    data.getString(2),
+//                    data.getString(3),
+//                    Double.valueOf(data.getString(4)),
+//                    Double.valueOf(data.getString(5)));
+//
+//            hamacList.add(restoreHamac);
+//        }
+//        Toast.makeText(getBaseContext(), "Populate List After", Toast.LENGTH_SHORT).show();
+//    }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -602,12 +602,20 @@ public class MapsActivity extends AppCompatActivity implements
                                 .fillColor(Color.argb(40, 35, 110, 25)) //f0236e19 240 35 110 25
                                 .clickable(true));
 
+                        //Add Hamac On Local DB
+//                        hamacDatabaseHelper.addData(f_currentHamac.getName(),
+//                                f_currentHamac.getName(),
+//                                f_currentHamac.getDescription(),
+//                                String.valueOf(f_currentHamac.getLat()),
+//                                String.valueOf(f_currentHamac.getLng()));
+
+                        //Get Unique ID from Firebase
+                        String hamacId = mDatabase.push().getKey();
+                        f_currentHamac.setId(hamacId);
+                        //Add currentHamc To HamacList
                         hamacList.add(f_currentHamac);
-                        hamacDatabaseHelper.addData(f_currentHamac.getId(),
-                                f_currentHamac.getName(),
-                                f_currentHamac.getDescription(),
-                                String.valueOf(f_currentHamac.getLat()),
-                                String.valueOf(f_currentHamac.getLng()));
+                        // pushing current to 'HamacListOnLine' node using the userId
+                        mDatabase.child(hamacId).setValue(f_currentHamac);
                     }
                     catch (Exception e)
                     {
