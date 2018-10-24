@@ -572,6 +572,15 @@ public class MapsActivity extends AppCompatActivity implements
             {
                 public void onClick(DialogInterface dialog, int which) {
                     // Do do my action here
+
+                    //Get Unique ID from Firebase
+                    String hamacId = mDatabase.push().getKey();
+                    f_currentHamac.setId(hamacId);
+                    //Add currentHamc To HamacList
+                    hamacList.add(f_currentHamac);
+                    // pushing current to 'HamacListOnLine' node using the userId
+                    mDatabase.child(hamacId).setValue(f_currentHamac);
+
                     // Creating MarkerOptions
                     MarkerOptions options = new MarkerOptions();
                     try {
@@ -582,7 +591,7 @@ public class MapsActivity extends AppCompatActivity implements
 
                         //Draw marker on click
                         MarkerOptions marker = new MarkerOptions();
-                        marker.position(position).title(f_currentHamac.getName());
+                        marker.position(position).title(f_currentHamac.getId());
                         marker.position(position).icon(BitmapDescriptorFactory.fromResource(R.mipmap.ic_marker_hamac));
                         mMap.addMarker(marker);
 
@@ -609,13 +618,7 @@ public class MapsActivity extends AppCompatActivity implements
 //                                String.valueOf(f_currentHamac.getLat()),
 //                                String.valueOf(f_currentHamac.getLng()));
 
-                        //Get Unique ID from Firebase
-                        String hamacId = mDatabase.push().getKey();
-                        f_currentHamac.setId(hamacId);
-                        //Add currentHamc To HamacList
-                        hamacList.add(f_currentHamac);
-                        // pushing current to 'HamacListOnLine' node using the userId
-                        mDatabase.child(hamacId).setValue(f_currentHamac);
+
                     }
                     catch (Exception e)
                     {
@@ -655,7 +658,7 @@ public class MapsActivity extends AppCompatActivity implements
         }
     }
 
-    public void showPopup(LayoutInflater inflater,int popupLayout, String title, String description)
+    public void showPopup(LayoutInflater inflater,int popupLayout, String hamacId, String description)
     {
         // Get the application context
 //        Context mContext = getApplicationContext();
@@ -711,6 +714,13 @@ public class MapsActivity extends AppCompatActivity implements
             }
         });
 
+        //Get hamac selected
+//        for (int i=0; i < hamacList.size(); i++)
+//        {
+//
+//        }
+//        Hamac selectedHamac = hamacList.get
+
         // Get a reference for the custom view close button
         ImageButton moreDetailsButton = customView.findViewById(R.id.ib_popup_more_details);
         // Set a click listener for the popup window close button
@@ -722,6 +732,7 @@ public class MapsActivity extends AppCompatActivity implements
                 // Dismiss the popup window
                 mPopupWindow.dismiss();
                 Intent myIntent = new Intent(MapsActivity.this, HamacActivity.class);
+//                myIntent.putExtra("HAMAC_SELECTED", hamacId);
                 startActivity(myIntent);
             }
         });
