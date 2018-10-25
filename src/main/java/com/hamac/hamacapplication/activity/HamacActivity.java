@@ -8,7 +8,6 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
 import android.support.annotation.NonNull;
-import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
@@ -16,10 +15,8 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
@@ -28,9 +25,9 @@ import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.OnProgressListener;
 import com.google.firebase.storage.StorageReference;
 import com.google.firebase.storage.UploadTask;
+import com.hamac.hamacapplication.R;
 import com.hamac.hamacapplication.data.Hamac;
 import com.hamac.hamacapplication.data.Navigation;
-import com.hamac.hamacapplication.R;
 
 import java.io.IOException;
 import java.util.List;
@@ -51,8 +48,8 @@ public class HamacActivity extends AppCompatActivity {
     private TextView hamacTitleView;
     private TextView hamacDescriptionView;
     //Firebase
-    FirebaseStorage storage;
-    StorageReference storageReference;
+    private FirebaseStorage storage;
+    private StorageReference storageReference;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -87,7 +84,7 @@ public class HamacActivity extends AppCompatActivity {
             @Override
             public void onClick(View v)
             {
-                uploadPhoto();
+                uploadPhoto(storageReference, filePath, currentDir);
             }
         });
 
@@ -126,7 +123,7 @@ public class HamacActivity extends AppCompatActivity {
         //Download Image and set into photoView1
         //Select a photo which exists on firebase Bucket: storageReference + currentDir
         currentDir = currentDir + "/20180810_142509.jpg";
-        downloadPhoto(photoView1);
+        downloadPhoto(photoView1, storageReference, currentDir);
 
         //Start Manage Toolbar > how to share this code into several Activities
         Toolbar hamacToolBar = findViewById(R.id.hamac_toolbar);
@@ -172,6 +169,61 @@ public class HamacActivity extends AppCompatActivity {
         startActivityForResult(Intent.createChooser(intent, "Select Picture"), PICK_IMAGE_REQUEST);
     }
 
+    private void downloadPhoto(final ImageView mImageView, StorageReference mStorageReference, String mCurrentDir)
+    {
+        final long ONE_MEGABYTE = 4096 * 4096;
+        mStorageReference.child(mCurrentDir).getBytes(ONE_MEGABYTE).addOnSuccessListener(new OnSuccessListener<byte[]>()
+        {
+            @Override
+            public void onSuccess(byte[] bytes)
+            {
+                Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
+                mImageView.setImageBitmap(bitmap);
+            }
+        });
+    }
+
+    private void uploadPhoto(StorageReference mStorageReference, Uri mFilePath, String mCurentDir)
+    {
+        if(mFilePath != null)
+        {
+            final ProgressDialog progressDialog = new ProgressDialog(this);
+            progressDialog.setTitle("Uploading...");
+            progressDialog.show();
+
+            StorageReference ref = mStorageReference.child(mCurentDir + "/"+ UUID.randomUUID().toString());
+            ref.putFile(mFilePath)
+                    .addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>()
+                    {
+                        @Override
+                        public void onSuccess(UploadTask.TaskSnapshot taskSnapshot)
+                        {
+                            progressDialog.dismiss();
+//                        Toast.makeText(HamacActivity.this, "Uploaded", Toast.LENGTH_SHORT).show();
+                        }
+                    })
+                    .addOnFailureListener(new OnFailureListener()
+                    {
+                        @Override
+                        public void onFailure(@NonNull Exception e)
+                        {
+                            progressDialog.dismiss();
+//                        Toast.makeText(HamacActivity.this, "Failed "+e.getMessage(), Toast.LENGTH_SHORT).show();
+                        }
+                    })
+                    .addOnProgressListener(new OnProgressListener<UploadTask.TaskSnapshot>()
+                    {
+                        @Override
+                        public void onProgress(UploadTask.TaskSnapshot taskSnapshot)
+                        {
+                            double progress = (100.0*taskSnapshot.getBytesTransferred()/taskSnapshot
+                                    .getTotalByteCount());
+                            progressDialog.setMessage("Uploaded "+(int)progress+"%");
+                        }
+                    });
+        }
+    }
+
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data)
     {
@@ -188,61 +240,6 @@ public class HamacActivity extends AppCompatActivity {
             {
                 e.printStackTrace();
             }
-        }
-    }
-
-    private void downloadPhoto(final ImageView mImageView)
-    {
-        final long ONE_MEGABYTE = 4096 * 4096;
-        storageReference.child(currentDir).getBytes(ONE_MEGABYTE).addOnSuccessListener(new OnSuccessListener<byte[]>()
-        {
-            @Override
-            public void onSuccess(byte[] bytes)
-            {
-                Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
-                mImageView.setImageBitmap(bitmap);
-            }
-        });
-    }
-
-    private void uploadPhoto()
-    {
-        if(filePath != null)
-        {
-            final ProgressDialog progressDialog = new ProgressDialog(this);
-            progressDialog.setTitle("Uploading...");
-            progressDialog.show();
-
-            StorageReference ref = storageReference.child(currentDir + "/"+ UUID.randomUUID().toString());
-            ref.putFile(filePath)
-                .addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>()
-                {
-                    @Override
-                    public void onSuccess(UploadTask.TaskSnapshot taskSnapshot)
-                    {
-                        progressDialog.dismiss();
-                        Toast.makeText(HamacActivity.this, "Uploaded", Toast.LENGTH_SHORT).show();
-                    }
-                })
-                .addOnFailureListener(new OnFailureListener()
-                {
-                    @Override
-                    public void onFailure(@NonNull Exception e)
-                    {
-                        progressDialog.dismiss();
-                        Toast.makeText(HamacActivity.this, "Failed "+e.getMessage(), Toast.LENGTH_SHORT).show();
-                    }
-                })
-                .addOnProgressListener(new OnProgressListener<UploadTask.TaskSnapshot>()
-                {
-                    @Override
-                    public void onProgress(UploadTask.TaskSnapshot taskSnapshot)
-                    {
-                        double progress = (100.0*taskSnapshot.getBytesTransferred()/taskSnapshot
-                                .getTotalByteCount());
-                        progressDialog.setMessage("Uploaded "+(int)progress+"%");
-                    }
-                });
         }
     }
 

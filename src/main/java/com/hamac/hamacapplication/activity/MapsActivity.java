@@ -9,6 +9,8 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.location.Location;
 import android.location.LocationListener;
@@ -47,11 +49,14 @@ import com.google.android.gms.maps.model.CircleOptions;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
+import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 import com.hamac.hamacapplication.R;
 import com.hamac.hamacapplication.data.DatabaseHelper;
@@ -87,6 +92,11 @@ public class MapsActivity extends AppCompatActivity implements
     private DatabaseHelper hamacDatabaseHelper;
 //    private StorageReference mStorageRef;
     private DatabaseReference mDatabase;
+    //Firebase
+    private FirebaseStorage storage;
+    private StorageReference storageReference;
+    private ImageView popupMarkerPhotoView;
+    private String currentDir = "";
     private ValueEventListener mMessageListener;
 
     @Override
@@ -302,7 +312,7 @@ public class MapsActivity extends AppCompatActivity implements
             layoutParams.setMargins(0, 0, 30, 30);
         }
 
-        // change compass position
+        // Change compass position
         if (mView != null &&
                 mView.findViewById(Integer.parseInt("1")) != null) {
             // Get the view
@@ -310,6 +320,7 @@ public class MapsActivity extends AppCompatActivity implements
             // and next place it, on bottom right (as Google Maps app)
             RelativeLayout.LayoutParams layoutParams = (RelativeLayout.LayoutParams)
                     locationCompass.getLayoutParams();
+
             // position on right bottom
             layoutParams.addRule(RelativeLayout.ALIGN_PARENT_START, 0);
             layoutParams.addRule(RelativeLayout.ALIGN_PARENT_END, RelativeLayout.TRUE);
@@ -386,7 +397,7 @@ public class MapsActivity extends AppCompatActivity implements
                 CameraPosition cameraPosition = new CameraPosition.Builder()
                         .target(currentPosition)      // Sets the center of the map to Mountain View
                         .zoom(17)                   // Sets the zoom
-                        .bearing(90)                // Sets the orientation of the camera to east
+                        .bearing(0)                // Sets the orientation of the camera to east
                         .tilt(30)                   // Sets the tilt of the camera to 30 degrees
                         .build();                   // Creates a CameraPosition from the builder
                 mMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
@@ -571,7 +582,8 @@ public class MapsActivity extends AppCompatActivity implements
 
             builder.setPositiveButton("YES", new DialogInterface.OnClickListener()
             {
-                public void onClick(DialogInterface dialog, int which) {
+                public void onClick(DialogInterface dialog, int which)
+                {
                     // Do do my action here
 
                     //Get Unique ID from Firebase
@@ -584,7 +596,8 @@ public class MapsActivity extends AppCompatActivity implements
 
                     // Creating MarkerOptions
                     MarkerOptions options = new MarkerOptions();
-                    try {
+                    try
+                    {
                         //Get LatLng from touched point
 //                    double touchLat = currentLocation.getLatitude();
 //                    double touchLong = currentLocation.getLongitude();
@@ -725,6 +738,23 @@ public class MapsActivity extends AppCompatActivity implements
         TextView popupMarkerTitle = customView.findViewById(R.id.tv_popup_marker_title);
         popupMarkerTitle.setText(selectedHamac.getDescription());
 
+        //Manage FireBase storage for photos view
+        storage = FirebaseStorage.getInstance();
+//        FirebaseAuth mAuth = FirebaseAuth.getInstance();
+        storageReference = storage.getReference();
+
+        popupMarkerPhotoView = findViewById(R.id.iv_popup_photo1);
+        //Download Image and set into photoView1
+        //Select a photo which exists on firebase Bucket: storageReference + currentDir
+//        currentDir = currentDir + "/20180810_142509.jpg";
+        currentDir =  selectedHamac.getId().substring(1, selectedHamac.getId().length()) + "/" + selectedHamac.getPhotoUrl_2();
+
+        Log.d("CHECK > ", "Current DIR : " + currentDir);
+
+        Toast.makeText(MapsActivity.this, "Current DIR : " + currentDir, Toast.LENGTH_SHORT).show();
+
+        downloadPhoto(popupMarkerPhotoView, storageReference, currentDir);
+
         final Hamac f_selectedHamac = selectedHamac;
         // Get a reference for the custom view close button
         ImageButton moreDetailsButton = customView.findViewById(R.id.ib_popup_more_details);
@@ -759,5 +789,19 @@ public class MapsActivity extends AppCompatActivity implements
         // Finally, show the popup window at the center location of root relative layout
         mPopupWindow.setOutsideTouchable(true);
         mPopupWindow.showAtLocation(mView, Gravity.CENTER,0,0);
+    }
+
+    private void downloadPhoto(final ImageView mImageView, StorageReference mStorageReference, String mCurrentDir)
+    {
+        final long ONE_MEGABYTE = 4096 * 4096;
+        mStorageReference.child(mCurrentDir).getBytes(ONE_MEGABYTE).addOnSuccessListener(new OnSuccessListener<byte[]>()
+        {
+            @Override
+            public void onSuccess(byte[] bytes)
+            {
+                Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
+                mImageView.setImageBitmap(bitmap);
+            }
+        });
     }
 }
