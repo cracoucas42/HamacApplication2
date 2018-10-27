@@ -62,9 +62,9 @@ public class HamacActivity extends AppCompatActivity {
         firstLaunch_flag = myIntent.getBooleanExtra("FIRST_LAUNCH", true);
         selectedHamac = (Hamac) myIntent.getSerializableExtra("HAMAC_SELECTED");
 
-        //Manage FireBase storage for photos view
-        storage = FirebaseStorage.getInstance();
-        storageReference = storage.getReference();
+//        //Manage FireBase storage for photos view
+//        storage = FirebaseStorage.getInstance();
+//        storageReference = storage.getReference();
 
         //Configure addPhotoBtn add_image_hamac_details
         addPhotoBtn = findViewById(R.id.iv_add_image_hamac_details);

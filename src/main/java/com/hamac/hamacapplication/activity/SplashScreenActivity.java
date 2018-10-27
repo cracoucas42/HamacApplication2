@@ -2,27 +2,44 @@ package com.hamac.hamacapplication.activity;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.ProgressDialog;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.Parcelable;
+import android.support.annotation.NonNull;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
 import android.util.Log;
 import android.view.View;
+import android.widget.ImageView;
 import android.widget.RelativeLayout;
 import android.widget.Toast;
 
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.firebase.auth.AuthResult;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
+import com.google.firebase.storage.FileDownloadTask;
+import com.google.firebase.storage.FirebaseStorage;
+import com.google.firebase.storage.OnProgressListener;
+import com.google.firebase.storage.StorageReference;
 import com.hamac.hamacapplication.R;
 import com.hamac.hamacapplication.data.Hamac;
 
+import java.io.File;
+import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
@@ -35,7 +52,14 @@ public class SplashScreenActivity extends Activity {
     private DatabaseReference mDatabase;
     private ValueEventListener mMessageListener;
     private ArrayList<Hamac> hamacList = new ArrayList<Hamac>();
+    //Firebase
+    private FirebaseStorage storage;
+    private StorageReference storageReference;
+    private FirebaseAuth mAuth;
+    private String currentDir_original = "";
+    private String currentDir_small = "";
 //    private Location currentLocation;
+    ProgressDialog progressDialog;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -80,6 +104,21 @@ public class SplashScreenActivity extends Activity {
 
         //Manage DataBase
         mDatabase = FirebaseDatabase.getInstance().getReference("HAMAC_LIST_ONLINE");
+        //Manage auhorisation to FireBase Storage
+        mAuth = FirebaseAuth.getInstance();
+        FirebaseUser user = mAuth.getCurrentUser();
+        if (user != null)
+        {
+            // do your stuff
+        }
+        else
+        {
+            Log.i("SIGNING : ", "Before Signing !");
+            signInAnonymously();
+        }
+        //Manage FireBase storage for photos view
+        storage = FirebaseStorage.getInstance();
+        storageReference = storage.getReference();
 
         //Get Data From FireBase DataBase
         ValueEventListener messageListener = new ValueEventListener()
@@ -109,6 +148,37 @@ public class SplashScreenActivity extends Activity {
                                 + " LNG :" + ds.child("lng").getValue(Double.class)
                                 + " LAT :" + ds.child("lat").getValue(Double.class));
 
+                        currentDir_original =  currentHamac.getId() + "/OriginalPhotos/";
+                        currentDir_small =  currentHamac.getId() + "/SmallPhotos/";
+                        //If there are some photos, get the smallFormat and put them into local directory
+                        //Create original (for splash view) and small/resized one for display without a large consommation
+                        //Create folder !exist
+                        String smallPhotos_folderPath = Environment.getExternalStorageDirectory() +
+                                                        ds.child("id").getValue(String.class) + "/SmallPhotos";
+                        File smallPhotosDirectory = new File(smallPhotos_folderPath);
+                        if (!smallPhotosDirectory.exists())
+                            smallPhotosDirectory.mkdirs();
+
+                        // Create a reference with an initial file path and name
+                        StorageReference pathReference = storageReference.child(currentDir_small);
+                        String[] photos = {currentHamac.getPhotoUrl_1(),
+                                            currentHamac.getPhotoUrl_2(),
+                                            currentHamac.getPhotoUrl_3(),
+                                            currentHamac.getPhotoUrl_4(),
+                                            currentHamac.getPhotoUrl_5()};
+                        //Download small photos from Firebase storage
+                        downloadPhotosToLocalFolder(storageReference, currentDir_small, photos, smallPhotosDirectory);
+
+                        String originalPhotos_folderPath = Environment.getExternalStorageDirectory() +
+                                                        ds.child("id").getValue(String.class) + "/OriginalPhotos";
+                        File originalPhotosDirectory = new File(originalPhotos_folderPath);
+                        if (!originalPhotosDirectory.exists())
+                            originalPhotosDirectory.mkdirs();
+
+                        //Original ## keep for splash view
+                        // Create a reference with an initial file path and name
+//                        pathReference = storageReference.child(currentDir_original);
+//                        downloadPhotos(storageReference, currentDir_original, photos, originalPhotosDirectory);
 //
 //                        String arrival = ds.child("Arrival").getValue(String.class);
 //                        String departure = ds.child("Departure").getValue(String.class);
@@ -224,6 +294,101 @@ public class SplashScreenActivity extends Activity {
                 // Permission was denied. Display an error message.
                 Toast.makeText(getApplicationContext(), "PERMISSION WAS NOT GRANTED", Toast.LENGTH_LONG).show();
             }
+        }
+    }
+
+    private void signInAnonymously()
+    {
+        Log.i("SIGNING : ", "Inside Signing anonyously !");
+        mAuth.signInAnonymously().addOnSuccessListener(this, new  OnSuccessListener<AuthResult>()
+        {
+            @Override
+            public void onSuccess(AuthResult authResult)
+            {
+                // do your stuff
+                Log.i("SIGNING ; ", "signInAnonymously:SUCCESS User TOKEN > " + authResult.getUser().getDisplayName());
+            }
+        }).addOnFailureListener(this, new OnFailureListener()
+        {
+            @Override
+            public void onFailure(@NonNull Exception exception) {
+                Log.e("SIGNING ; ", "signInAnonymously:FAILURE", exception);
+            }
+        });
+    }
+
+    private void downloadPhotos(StorageReference mStorageReference, String mCurrentDir, String[] photos, File folder)
+    {
+        final long ONE_MEGABYTE = 4096 * 4096;
+
+        for (int i = 0; i < photos.length; i++)
+        {
+            Log.i("DOWNLOAD PHOTOSS: ", "Current REF : " + mStorageReference + " Current DIR : " + mCurrentDir + photos[i]);
+            if (photos[i].length() > 1)
+            {
+                mStorageReference.child(mCurrentDir + photos[i]).getBytes(ONE_MEGABYTE).addOnSuccessListener(new OnSuccessListener<byte[]>()
+                {
+                    @Override
+                    public void onSuccess(byte[] bytes)
+                    {
+                        //dialog dismiss
+
+                    }
+                });
+            }
+        }
+    }
+    private void downloadPhotosToLocalFolder(StorageReference mStorageReference, String mCurrentDir, String[] photos, File folder)
+    {
+        progressDialog = new ProgressDialog(this);
+        if (mStorageReference != null)
+        {
+            progressDialog.setTitle("Downloading...");
+            progressDialog.setMessage(null);
+            progressDialog.show();
+
+            for (int i = 0; i < photos.length; i++)
+            {
+                Log.i("DOWNLOAD PHOTOSS: ", "Current REF : " + mStorageReference + " Current DIR : " + mCurrentDir + photos[i] + " INDEX > " + i);
+                if (photos[i].length() > 1)
+                {
+                    final File localFile = new File (folder, photos[i]);
+
+                    mStorageReference.child(mCurrentDir + photos[i]).getFile(localFile).addOnSuccessListener(new OnSuccessListener<FileDownloadTask.TaskSnapshot>()
+                    {
+                        @Override
+                        public void onSuccess(FileDownloadTask.TaskSnapshot taskSnapshot)
+                        {
+//                        Bitmap bmp = BitmapFactory.decodeFile(localFile.getAbsolutePath());
+//                        imageView.setImageBitmap(bmp);
+                            progressDialog.dismiss();
+                        }
+                    }).addOnFailureListener(new OnFailureListener()
+                    {
+                        @Override
+                        public void onFailure(@NonNull Exception exception)
+                        {
+                            progressDialog.dismiss();
+                            Toast.makeText(SplashScreenActivity.this, exception.getMessage(), Toast.LENGTH_LONG).show();
+                        }
+                    }).addOnProgressListener(new OnProgressListener<FileDownloadTask.TaskSnapshot>()
+                    {
+                        @Override
+                        public void onProgress(FileDownloadTask.TaskSnapshot taskSnapshot)
+                        {
+                            // progress percentage
+                            double progress = (100.0 * taskSnapshot.getBytesTransferred()) / taskSnapshot.getTotalByteCount();
+
+                            // percentage in progress dialog
+                            progressDialog.setMessage("Downloaded " + ((int) progress) + "%...");
+                        }
+                    });
+                }
+            }
+        }
+        else
+        {
+            Toast.makeText(SplashScreenActivity.this, "Upload file before downloading", Toast.LENGTH_LONG).show();
         }
     }
 }

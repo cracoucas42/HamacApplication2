@@ -8,7 +8,6 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
@@ -49,10 +48,11 @@ import com.google.android.gms.maps.model.CircleOptions;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.database.DataSnapshot;
-import com.google.firebase.database.DatabaseError;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
@@ -90,11 +90,12 @@ public class MapsActivity extends AppCompatActivity implements
     private LocationManager lm;
     private Circle mCircle;
     private DatabaseHelper hamacDatabaseHelper;
-//    private StorageReference mStorageRef;
-    private DatabaseReference mDatabase;
+    //    private StorageReference mStorageRef;
     //Firebase
+    private DatabaseReference mDatabase;
     private FirebaseStorage storage;
     private StorageReference storageReference;
+    private FirebaseAuth mAuth;
     private ImageView popupMarkerPhotoView;
     private String currentDir = "";
     private ValueEventListener mMessageListener;
@@ -264,10 +265,10 @@ public class MapsActivity extends AppCompatActivity implements
         {
             ActivityCompat.requestPermissions(this,
                     new String[]
-                        {
-                            Manifest.permission.ACCESS_FINE_LOCATION,
-                            Manifest.permission.ACCESS_COARSE_LOCATION
-                        },
+                            {
+                                    Manifest.permission.ACCESS_FINE_LOCATION,
+                                    Manifest.permission.ACCESS_COARSE_LOCATION
+                            },
                     1);
 
             Toast.makeText(getApplicationContext(), "Request PERMISSION", Toast.LENGTH_SHORT).show();
@@ -524,8 +525,9 @@ public class MapsActivity extends AppCompatActivity implements
         //Create a Popup from class PopupMarker for marker description
 //        markerPopup = new Popup(mView, inflater, mPopupWindow, R.layout.popup_marker,  marker.getTitle(), popupDescription);
         Intent myIntent = MapsActivity.this.getIntent();
+        Log.i("SHOW POPUP : ", "Before show POPUP");
         showPopup(inflater, R.layout.popup_marker,  marker.getTitle(), popupDescription);
-
+        Log.i("SHOW POPUP : ", "After show POPUP");
         return true;
     }
 
@@ -684,19 +686,19 @@ public class MapsActivity extends AppCompatActivity implements
         // Inflate the custom layout/view
         View customView = inflater.inflate(popupLayout,null);
 
-                /*
-                    public PopupWindow (View contentView, int width, int height)
-                        Create a new non focusable popup window which can display the contentView.
-                        The dimension of the window must be passed to this constructor.
+        /*
+            public PopupWindow (View contentView, int width, int height)
+                Create a new non focusable popup window which can display the contentView.
+                The dimension of the window must be passed to this constructor.
 
-                        The popup does not provide any background. This should be handled by
-                        the content view.
+                The popup does not provide any background. This should be handled by
+                the content view.
 
-                    Parameters
-                        contentView : the popup's content
-                        width : the popup's width
-                        height : the popup's height
-                */
+            Parameters
+                contentView : the popup's content
+                width : the popup's width
+                height : the popup's height
+        */
 
         // Initialize a new instance of popup window
         if (mPopupWindow != null)
@@ -738,21 +740,33 @@ public class MapsActivity extends AppCompatActivity implements
         TextView popupMarkerTitle = customView.findViewById(R.id.tv_popup_marker_title);
         popupMarkerTitle.setText(selectedHamac.getDescription());
 
+        //Select a photo which exists on firebase Bucket: storageReference + currentDir
+        //currentDir = currentDir + "/20180810_142509.jpg";
+        currentDir =  selectedHamac.getId() + "/OriginalPhotos/" + selectedHamac.getPhotoUrl_2();
+
+        //Manage auhorisation to FireBase Storage
+        mAuth = FirebaseAuth.getInstance();
+        FirebaseUser user = mAuth.getCurrentUser();
+        if (user != null)
+        {
+            // do your stuff
+        }
+        else
+        {
+            Log.i("SIGNING : ", "Before Signing !");
+            signInAnonymously();
+        }
         //Manage FireBase storage for photos view
         storage = FirebaseStorage.getInstance();
-//        FirebaseAuth mAuth = FirebaseAuth.getInstance();
         storageReference = storage.getReference();
+        // Create a reference with an initial file path and name
+        StorageReference pathReference = storageReference.child(currentDir);
 
-        popupMarkerPhotoView = findViewById(R.id.iv_popup_photo1);
+        Log.i("CHECK > ", "Current DIR : " + currentDir);
+        //Toast.makeText(MapsActivity.this, "Current DIR : " + currentDir, Toast.LENGTH_SHORT).show();
         //Download Image and set into photoView1
-        //Select a photo which exists on firebase Bucket: storageReference + currentDir
-//        currentDir = currentDir + "/20180810_142509.jpg";
-        currentDir =  selectedHamac.getId().substring(1, selectedHamac.getId().length()) + "/" + selectedHamac.getPhotoUrl_2();
-
-        Log.d("CHECK > ", "Current DIR : " + currentDir);
-
-        Toast.makeText(MapsActivity.this, "Current DIR : " + currentDir, Toast.LENGTH_SHORT).show();
-
+//        popupMarkerPhotoView = new ImageView(this);
+        popupMarkerPhotoView = customView.findViewById(R.id.iv_popup_photo1);
         downloadPhoto(popupMarkerPhotoView, storageReference, currentDir);
 
         final Hamac f_selectedHamac = selectedHamac;
@@ -793,6 +807,7 @@ public class MapsActivity extends AppCompatActivity implements
 
     private void downloadPhoto(final ImageView mImageView, StorageReference mStorageReference, String mCurrentDir)
     {
+        Log.i("DOWNLOAD PHOTO : ", "Current REF : " + mStorageReference + " Current DIR : " + mCurrentDir);
         final long ONE_MEGABYTE = 4096 * 4096;
         mStorageReference.child(mCurrentDir).getBytes(ONE_MEGABYTE).addOnSuccessListener(new OnSuccessListener<byte[]>()
         {
@@ -800,7 +815,30 @@ public class MapsActivity extends AppCompatActivity implements
             public void onSuccess(byte[] bytes)
             {
                 Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
-                mImageView.setImageBitmap(bitmap);
+                if (bitmap != null)
+                    mImageView.setImageBitmap(bitmap);
+                else
+                    Log.i("Set Image View", "Set downloaded photo to photoView ! Bytes length : " + bytes.length);
+            }
+        });
+    }
+
+    private void signInAnonymously()
+    {
+        Log.i("SIGNING : ", "Inside Signing anonyously !");
+        mAuth.signInAnonymously().addOnSuccessListener(this, new  OnSuccessListener<AuthResult>()
+        {
+            @Override
+            public void onSuccess(AuthResult authResult)
+            {
+                // do your stuff
+                Log.i("SIGNING ; ", "signInAnonymously:SUCCESS User TOKEN > " + authResult.getUser().getDisplayName());
+            }
+        }).addOnFailureListener(this, new OnFailureListener()
+        {
+            @Override
+            public void onFailure(@NonNull Exception exception) {
+                Log.e("SIGNING ; ", "signInAnonymously:FAILURE", exception);
             }
         });
     }
