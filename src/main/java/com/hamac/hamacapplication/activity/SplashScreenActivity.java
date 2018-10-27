@@ -390,5 +390,6 @@ public class SplashScreenActivity extends Activity {
         {
             Toast.makeText(SplashScreenActivity.this, "Upload file before downloading", Toast.LENGTH_LONG).show();
         }
+        //Ca marche
     }
 }
