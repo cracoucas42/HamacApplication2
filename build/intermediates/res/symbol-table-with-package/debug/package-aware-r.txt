@@ -1322,6 +1322,7 @@ id snackbar_text
 id snap
 id snapMargins
 id spacer
+id splash_screen_view
 id split_action_bar
 id spread
 id spread_inside
@@ -1362,6 +1363,7 @@ id transition_layout_save
 id transition_position
 id transition_scene_layoutid_cache
 id transition_transform
+id tv_hamac_description
 id tv_hamac_title
 id tv_popup_about_description
 id tv_popup_about_title
